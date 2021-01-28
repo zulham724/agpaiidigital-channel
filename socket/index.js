@@ -15,8 +15,13 @@ io.on("connection", socket => {
 
     // untuk masuk ke room
     socket.on('create', function(room) {
-        console.log('room joined with name', room)
+        console.log('somebody create room with name ', room)
         socket.join(room);
+    })
+
+    socket.on('invite', ({ room, data }) => {
+        console.log('someone inviting...')
+        socket.to(room).emit('invite', data)
     })
 
     // untuk event pesan
