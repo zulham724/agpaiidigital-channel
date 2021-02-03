@@ -1,5 +1,5 @@
-const { io } = require("../bin/www");
-const socketioJwt = require('socketio-jwt')
+const { io } = require("../app");
+const socketioJwt = require("socketio-jwt");
 
 // io.on(
 //     "connection",
@@ -11,41 +11,46 @@ const socketioJwt = require('socketio-jwt')
 //     console.log(`hello! ${socket.decoded_token.name}`);
 // });
 
-io.on("connection", socket => {
+io.on("connection", (socket) => {
+    console.log("client connected");
 
     // untuk masuk ke room
-    socket.on('create', function(room) {
-        console.log('somebody create room with name ', room)
+    socket.on("join", function(room) {
+        console.log("somebody create room with name ", room);
         socket.join(room);
-    })
+    });
 
-    socket.on('invite', ({ room, data }) => {
-        console.log('someone inviting...')
-        socket.to(room).emit('invite', data)
-    })
+    // untuk event mengajak orang untuk listen ke room tertentu
+    socket.on("invite", ({ room, data }) => {
+        console.log("someone inviting...");
+        socket.to(room).emit("Invite", data);
+    });
 
     // untuk event pesan
-    socket.on('message', ({ room, data }) => {
-        socket.to(room).emit('message', data);
-        console.log(room, data)
-    })
+    socket.on("message", ({ room, data }) => {
+        socket.to(room).emit("Message", data);
+        console.log(room, data);
+    });
 
     // untuk event mengetik
-    socket.on('typing', ({ room }) => {
-        socket.to(room).emit('typing', 'Someone is typing')
-    })
+    socket.on("typing", ({ room }) => {
+        socket.to(room).emit("Typing", "Someone is typing");
+    });
 
     // untuk event stop mengetik
-    socket.on('stopped_typing', ({ room }) => {
-        socket.to(room).emit('stopped_typing')
-    })
+    socket.on("stopped_typing", ({ room }) => {
+        socket.to(room).emit("StoppedTyping");
+    });
+});
 
-    // ganti event dari pusher
-    socket.on('assigment_event', ({ room, data }) => {
-        socket.to(room).emit('assigment_event', data)
-    })
+// router.get('/socket/test', function(req, res, next) {
+//     res.render('index', { title: 'asd' })
 
-})
+//     socket.on('test', ({ data }) => {
+//         socket.emit('test', data);
+//         console.log(data)
+//     })
+// });
 
 // io.sockets.to('notification').emit('LikedPost', 'what is going on, party people?');
 
