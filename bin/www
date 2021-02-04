@@ -7,6 +7,7 @@
 var { app } = require("../app");
 var debug = require("debug")("agpaiidigital-channel:server");
 var http = require("http");
+var createError = require("http-errors");
 
 /**
  * Get port from environment and store in Express.
@@ -19,7 +20,23 @@ app.set("port", port);
  * Create HTTP server.
  */
 
+
+
 var server = http.createServer(app);
+var io = require('../socket/index')(server); //inisialisasi socket.io dengan server sbg listen'nya
+
+app.use(function(req, res, next) {
+    req.io = io;
+    next();
+});
+
+var apiRouter = require("../routes/api");
+app.use("/api", apiRouter);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+    next(createError(404));
+});
 
 /**
  * initializing socket.io

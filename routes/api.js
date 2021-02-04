@@ -8,7 +8,9 @@ router.get('/socket/test', function(req, res) {
      */
     res.render('index', { title: 'asd' })
         // now broadcast the updated foo..
-    req.io.sockets.emit('test', 'asd');
+    req.io.emit('test', 'anjay');
 });
+// return router;
+
 
 module.exports = router;

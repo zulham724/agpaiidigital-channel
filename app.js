@@ -1,43 +1,46 @@
-var createError = require("http-errors");
+// var createError = require("http-errors");
 var express = require("express");
 var app = express();
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
-var io = require("socket.io").listen(app.listen(5000));
+// var io = require("socket.io").listen(5000);
 
-io.on("connection", (socket) => {
-    console.log("client connected");
-});
+// io.on("connection", (socket) => {
+//     console.log("client connected");
+// });
 
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
-var apiRouter = require("./routes/api");
+// var apiRouter = require("./routes/api");
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "jade");
 
-app.use(logger("dev"));
+app.use(logger("de"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 // Make io accessible to our router
-app.use(function(req, res, next) {
-    req.io = io;
-    next();
-});
+// app.use(function(req, res, next) {
+//     req.io = io;
+//     next();
+// });
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
-app.use("/api", apiRouter);
 
+
+// app.use("/api", apiRouter);
+
+// dipindah ke bin/wwww
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
-    next(createError(404));
-});
+// app.use(function(req, res, next) {
+//     next(createError(404));
+// });
 
 // error handler
 app.use(function(err, req, res, next) {
@@ -50,4 +53,7 @@ app.use(function(err, req, res, next) {
     res.render("error");
 });
 
-module.exports = { app, io };
+
+
+
+module.exports = { app};
