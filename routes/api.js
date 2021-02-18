@@ -6,9 +6,9 @@ router.get('/socket/test', function(req, res) {
       do stuff to update the foo resource 
       ...
      */
+    req.io.emit('test', 'anjay');
     res.render('index', { title: 'asd' })
         // now broadcast the updated foo..
-    req.io.emit('test', 'anjay');
 });
 router.get('/socket/test2', function(req, res) {
     /* 
@@ -17,7 +17,7 @@ router.get('/socket/test2', function(req, res) {
      */
     res.render('index', { title: 'kirim pesan' })
         // now broadcast the updated foo..
-    req.io.to('personal_conversation_29').emit("message", 'kirim pesan ke personal_conversation_29');
+    req.io.emit("details");
 });
 // return router;
 

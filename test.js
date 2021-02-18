@@ -1,0 +1,11 @@
+const fs = require('fs');
+var jwt = require("@ardatamedia/ardata-jsonwebtoken");
+var cert = fs.readFileSync('test/oauth-public.key');  // get public key
+
+const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIyIiwianRpIjoiMDcyNGQ2NWUzNmM1YzQ1M2FkMTc4NTcxYjkxZDljZmYwM2EzMjFhM2FiODg1ZGMzZWMyZWJjMjZlNjlkZjdjZTViOGVkNjc4MmQ2NjUwZmYiLCJpYXQiOiIxNjEzMDMyNDk0Ljc0ODkwNiIsIm5iZiI6IjE2MTMwMzI0OTQuNzQ4OTEwIiwiZXhwIjoiMTY0NDU2ODQ5NC43MzgyNTAiLCJzdWIiOiIxNTI1MzAiLCJzY29wZXMiOltdfQ.dajCnyjeyYNViK3UPVzoOp0yWzfO7uLFXw0_XHIKHJyNHb_8PpeCz-EEuepBplpDmRsOVFDU83ndyYlSWKs_HZvjjt-oytb3DNSbJUGwt8HNvkPJz5OPre4tHR-vPcpLCQRrrd1nYIAnGHxnzFujtJq-4oZDs8l34_NjTujoYAWPLVq6Kr74OFZ8QKWgOO3rf7LNsiFrLLkta2aRUtL1bNEu-EqNY3xsK5C2KeajTz-bJ3hSXDmMRBip3MyuEE0pZDuqYUGVfHMYIetHJ4xYntWRw_7kvgZpJM1G1BJ2T-mWzGkUBSvr7b-lfP_GciO_mt1QGx3ri5czhP9k95UW1deVeMJE1QUtZYqdPdlsF3QJZ8mJGIXX8JFBqSL6Ft15XJl9yZppclnmS5M0cosFRdG5VepfwbhYMWHMXLfkrhi4OkwFn4LwSFKC4BhZwKM1gAMbMgsvx6D4b3MDNweypUF-g0CL9Yjo-nHRmluAv53qWO8Iqv-zZLcBR5CQVV5PS1_rU-78pA_K9_JtVpudaYRVfkCzu9rJdYbAB-aNFmmgKudyhmaOqcXBKOOtljNaB9qPqTXJ05Ruv69SrvhSOfXtihi9eMaEyPCrIDVNX-1RrE4tqVbNloYQjgdMoHgF4CIUl-4rlhI9U0CvXJ_mHzV3onY0nWRmpejiekyePpA';
+try{
+    var decode = jwt.verify(token,cert, { algorithms: ['RS256'] });
+    console.log(decode)
+}catch(err){
+    console.log('error gan')
+}
