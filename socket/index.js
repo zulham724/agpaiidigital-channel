@@ -30,12 +30,11 @@ module.exports = function (server) {
             const decoded_token = jwt.verify(token, cert, { algorithms: ["RS256"] });
             socket.decoded_token = decoded_token;
             socket.jwt = socket.handshake.query.token;
-            console.groupCollapsed(["decoded token"], decoded_token);
-            console.groupEnd();
+            console.debug("[Auth] success auth from user_id:", decoded_token.sub);
             next();
         } catch (err) {
             // console.log('auth vailed');
-            console.log(err);
+            // console.log();
             next(err);
         }
     });
@@ -46,8 +45,8 @@ module.exports = function (server) {
 
         // memberi property user_id pada client socket
         socket.user_id = socket.decoded_token.sub;
-        console.groupCollapsed(["new socket.io client"], socket.id);
-        console.groupEnd();
+        console.debug('[connection] new socket.io client:',socket.id);
+       
 
         // console.log("client connected", new Date());
         socket.on("join", function (room) {
