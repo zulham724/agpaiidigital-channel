@@ -7,9 +7,9 @@ module.exports = ({postData,jwt}) => {
     axios
         .post(postUrl, postData)
         .then((res) => {
-            console.log("insert ke db:", res.data);
+            console.log("[saveMessage] status:", res.data);
         })
         .catch((err) => {
-            console.log("error send to db:", err);
+            console.log("error send to db:",err.name);
         });
 };

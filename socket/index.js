@@ -53,11 +53,8 @@ module.exports = function (server) {
             // // jika client join ke room dgn prefix di bawah, maka akan dilakukan pengecekan authentication berdasarkan socket.decode_token.sub
             // const prefix_to_check = ['personal_conversation'];
             // // if(checkAuth(room,))
-            console.log(
-                "somebody join room",
-                room,
-                "with user_id",
-                socket.decoded_token.sub
+            console.log("[join] user_id ", socket.decoded_token.sub," join room:",
+                room,               
             );
             socket.join(room);
         });
@@ -67,12 +64,9 @@ module.exports = function (server) {
             // maka akan dilakukan pengecekan authentication berdasarkan socket.decode_token.sub
             const a = room.split("_").pop();
             if (a == socket.decoded_token.sub) {
-                console.log(
-                    "somebody join INDIVIDUAL room",
-                    room,
-                    "with user_id",
-                    socket.decoded_token.sub
-                );
+                console.log("[join] user_id ", socket.decoded_token.sub," join INDIVIDUAL room:",
+                room,               
+            );
                 socket.join(room);
             } else {
                 console.log("User", user_id, "not authenticated with room:", room);
@@ -88,7 +82,7 @@ module.exports = function (server) {
         socket.on("message", ({ conversation, data }) => {
             try {
                 console.log(
-                    "send message to conversation_id ",
+                    "[message] to conversation_id ",
                     conversation.id,
                     ":",
                     data
@@ -144,7 +138,7 @@ module.exports = function (server) {
 
                 // console.groupCollapsed(['room'],io.sockets.adapter.rooms['conversation'].sockets);
             } catch (err) {
-                console.log("message EVENT error:", err);
+                console.log("[message] EVENT error:", err.name);
             }
         });
 
@@ -152,21 +146,21 @@ module.exports = function (server) {
         socket.on("typing", ({ conversation, sender }) => {
             try {
                 // socket.to(room).emit("Typing", user);
-                console.log(sender, "is typing in conversation_id", conversation.id);
+                console.log('[typing]',sender, "is typing in conversation_id", conversation.id);
                 // mengirim emit ke semua user participant di conversation_id
                 conversation.users.forEach((user) => {
                     const receiver_room = "conversation_list_" + user.id;
                     io.to(receiver_room).emit("typing", { conversation, sender });
                 });
             } catch (err) {
-                console.log("typing EVENT error:", err);
+                console.log("[typing] EVENT error:", err.name);
             }
         });
 
         // untuk event stop mengetik
         socket.on("stopped_typing", ({ conversation, sender }) => {
             try{
-                console.log(
+                console.log('[stopped_typing]',
                     sender,
                     "is STOPPED typing in conversation_id",
                     conversation.id
@@ -177,7 +171,7 @@ module.exports = function (server) {
                     io.to(receiver_room).emit("stopped_typing", { conversation, sender });
                 });
             }catch(err){
-                console.log("stopped_typing EVENT error:", err);
+                console.log("[stopped_typing[] EVENT error:", err.name);
             }
            
         });
