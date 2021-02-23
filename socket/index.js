@@ -1,3 +1,5 @@
+const { default: axios } = require("axios");
+
 function checkAuth(room, socket) {
     const user_id = socket.decoded_token.sub;
     const a = room.split("_").pop();
@@ -35,6 +37,7 @@ module.exports = function (server) {
         } catch (err) {
             // console.log('auth vailed');
             // console.log();
+            if (process.env.APP_DEV) console.log('[Auth] Failed: ', err);
             next(err);
         }
     });
@@ -45,16 +48,16 @@ module.exports = function (server) {
 
         // memberi property user_id pada client socket
         socket.user_id = socket.decoded_token.sub;
-        console.log('[connection] new socket.io client:',socket.id);
-       
+        console.log('[connection] new socket.io client:', socket.id);
+
 
         // console.log("client connected", new Date());
         socket.on("join", function (room) {
             // // jika client join ke room dgn prefix di bawah, maka akan dilakukan pengecekan authentication berdasarkan socket.decode_token.sub
             // const prefix_to_check = ['personal_conversation'];
             // // if(checkAuth(room,))
-            console.log("[join] user_id ", socket.decoded_token.sub," join room:",
-                room,               
+            console.log("[join] user_id ", socket.decoded_token.sub, " join room:",
+                room,
             );
             socket.join(room);
         });
@@ -64,9 +67,9 @@ module.exports = function (server) {
             // maka akan dilakukan pengecekan authentication berdasarkan socket.decode_token.sub
             const a = room.split("_").pop();
             if (a == socket.decoded_token.sub) {
-                console.log("[join] user_id ", socket.decoded_token.sub," join INDIVIDUAL room:",
-                room,               
-            );
+                console.log("[join] user_id ", socket.decoded_token.sub, " join INDIVIDUAL room:",
+                    room,
+                );
                 socket.join(room);
             } else {
                 console.log("User", user_id, "not authenticated with room:", room);
@@ -146,7 +149,7 @@ module.exports = function (server) {
         socket.on("typing", ({ conversation, sender }) => {
             try {
                 // socket.to(room).emit("Typing", user);
-                console.log('[typing]',sender, "is typing in conversation_id", conversation.id);
+                console.log('[typing]', sender, "is typing in conversation_id", conversation.id);
                 // mengirim emit ke semua user participant di conversation_id
                 conversation.users.forEach((user) => {
                     const receiver_room = "conversation_list_" + user.id;
@@ -159,7 +162,7 @@ module.exports = function (server) {
 
         // untuk event stop mengetik
         socket.on("stopped_typing", ({ conversation, sender }) => {
-            try{
+            try {
                 console.log('[stopped_typing]',
                     sender,
                     "is STOPPED typing in conversation_id",
@@ -170,16 +173,30 @@ module.exports = function (server) {
                     const receiver_room = "conversation_list_" + user.id;
                     io.to(receiver_room).emit("stopped_typing", { conversation, sender });
                 });
-            }catch(err){
+            } catch (err) {
                 console.log("[stopped_typing[] EVENT error:", err.name);
             }
-           
+
         });
 
         // untuk event test
         socket.on("test", ({ room }) => {
             console.log("test gan");
             // socket.to(room).emit("test");
+        });
+
+        // untuk event read_conversation
+        socket.on('read_conversation', ({ conversation_id }) => {
+            console.log("[read_conversation] conversation id:", conversation_id);
+            require("../socket/readConversation")({
+                conversation_id: conversation_id,
+                jwt: socket.jwt,
+            }, (data) => {
+                console.log('[read_conversation] response from server:', data);
+                const user_id = socket.decoded_token.sub;
+                const payload = { conversation_id: conversation_id, unread_conversations: data.unread_conversations,read_at: data.read_at, read_chats: data.read_chats }
+                io.to(`conversation_list_${user_id}`).emit('read_conversation', payload);
+            });
         });
     });
     // io.on("connection", (socket) => {
