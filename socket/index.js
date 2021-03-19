@@ -6,7 +6,7 @@ function checkAuth(room, socket) {
     if (a == user_id) return true;
     return false;
 }
-module.exports = function (server) {
+module.exports = async function (server, { mediasoupObj }) {
     const fs = require("fs");
     const io = require("socket.io").listen(server);
     var jwt = require("@ardatamedia/ardata-jsonwebtoken");

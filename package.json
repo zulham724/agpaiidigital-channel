@@ -15,6 +15,7 @@
     "http-errors": "~1.6.3",
     "ioredis": "^4.19.4",
     "jade": "~1.11.0",
+    "mediasoup": "^3.6.36",
     "morgan": "~1.9.1",
     "redis": "^3.0.2",
     "socket.io": "^2.3.0",

@@ -22,18 +22,28 @@ app.set("port", port);
 
 
 var server = http.createServer(app);
-var io = require('../socket/index')(server); //inisialisasi socket.io dengan server sbg listen'nya
+var mediasoupObj = require("../mediasoup/index");
 
-app.use(function(req, res, next) {
-    req.io = io;
-    next();
-});
+(async () => {
+    let io = await require('../socket/index')(server, { mediasoupObj: mediasoupObj }) //inisialisasi socket.io dengan server sbg listen'nya
+    app.use(function (req, res, next) {
+        req.io = io;
+        next();
+    });
+    await mediasoupObj.runMediasoupWorker();
+    // console.log(mediasoupObj.mediasoupRouter)
+})();
+
+// app.use(function (req, res, next) {
+//     req.io = io;
+//     next();
+// });
 
 var apiRouter = require("../routes/api");
 app.use("/api", apiRouter);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     next(createError(404));
 });
 
