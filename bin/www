@@ -26,9 +26,18 @@ var mediasoupObj = require("../mediasoup/index");
 
 (async () => {
     let io = await require('../socket/index')(server, { mediasoupObj: mediasoupObj }) //inisialisasi socket.io dengan server sbg listen'nya
+
+    // memasukkan instance io ke app.req
     app.use(function (req, res, next) {
         req.io = io;
         next();
+    });
+    var apiRouter = require("../routes/api");
+    app.use("/api", apiRouter);
+
+    // catch 404 and forward to error handler
+    app.use(function (req, res, next) {
+        next(createError(404));
     });
     await mediasoupObj.runMediasoupWorker();
     // console.log(mediasoupObj.mediasoupRouter)
@@ -39,13 +48,13 @@ var mediasoupObj = require("../mediasoup/index");
 //     next();
 // });
 
-var apiRouter = require("../routes/api");
-app.use("/api", apiRouter);
+// var apiRouter = require("../routes/api");
+// app.use("/api", apiRouter);
 
-// catch 404 and forward to error handler
-app.use(function (req, res, next) {
-    next(createError(404));
-});
+// // catch 404 and forward to error handler
+// app.use(function (req, res, next) {
+//     next(createError(404));
+// });
 
 /**
  * initializing socket.io
