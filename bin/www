@@ -6,7 +6,13 @@
 // require('dotenv').config()
 var { app } = require("../app");
 var debug = require("debug")("agpaiidigital-channel:server");
-var http = require("http");
+
+if(process.env.IS_SSL=='true'){
+    var https = require("https");
+    
+}else{
+    var http = require("http");
+}
 var createError = require("http-errors");
 /**
  * Get port from environment and store in Express.
@@ -19,9 +25,18 @@ app.set("port", port);
  * Create HTTP server.
  */
 
-
-
-var server = http.createServer(app);
+var server;
+if(process.env.IS_SSL=='true'){
+    const fs = require('fs');
+    const options = {
+        key: fs.readFileSync('certificate/key.pem'),
+        cert: fs.readFileSync('certificate/cert.pem')
+      };
+    server = https.createServer(options, app);
+}else{
+    server = http.createServer(app);
+}
+// var server = http.createServer(app);
 var mediasoupObj = require("../mediasoup/index");
 
 (async () => {

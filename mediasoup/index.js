@@ -6,9 +6,20 @@ let obj = {
     worker: undefined,
     router: undefined,
     producerTransport: undefined,
+    producerTransports: new Map(),
     consumerTransport: undefined,
     producer: undefined,
+    producers: new Map(),
     consumer: undefined,
+    broadcasters:new Map(),
+    /*
+    item untuk broadcaster:
+      {
+        user://
+        producerTransport: undefined,
+        producer: undefined
+      }
+    */
     // methods
     async runMediasoupWorker() {
         console.log("[*] runMediasoupWorker")
@@ -89,6 +100,13 @@ let obj = {
           type: obj.consumer.type,
           producerPaused: obj.consumer.producerPaused
         };
+      },
+      getBroadcasters(){
+        let users = [];
+        for(let [key, value] of obj.broadcasters){
+            users.push(value.user);
+        }
+        return users;
       }
       
 }

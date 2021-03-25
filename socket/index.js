@@ -57,6 +57,14 @@ module.exports = async function (server, { mediasoupObj }) {
         chatModule(socket, io);
         mediasoupModule(socket, {mediasoupObj:mediasoupObj});
 
+        socket.on("disconnect",()=>{
+            devLogger('[disconnect] user_id',socket.decoded_token.sub,' disconnect');
+            // hapus dari broadcasters jika user disconnect
+            devLogger('hapus:',mediasoupObj.broadcasters.delete(parseInt(socket.decoded_token.sub)));
+            const broadcasters = mediasoupObj.getBroadcasters();
+            // console.log('cok',Array.from(mediasoupObj.broadcasters),typeof socket.decoded_token.sub);
+            socket.broadcast.emit('mediasoup_broadcasters',broadcasters);
+        });
         
        
     });
