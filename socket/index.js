@@ -60,7 +60,21 @@ module.exports = async function (server, { mediasoupObj }) {
         socket.on("disconnect",()=>{
             devLogger('[disconnect] user_id',socket.decoded_token.sub,' disconnect');
             // hapus dari broadcasters jika user disconnect
-            devLogger('hapus:',mediasoupObj.broadcasters.delete(parseInt(socket.decoded_token.sub)));
+            const user_id = parseInt(socket.decoded_token.sub);
+
+            try{
+                if(mediasoupObj.broadcasters.has(user_id)){
+                    const broadcaster = mediasoupObj.broadcasters.get(user_id);
+                    devLogger('producer_id to removed:',broadcaster.producer.id)
+                    broadcaster.producer.close();
+                }
+                
+            }catch(e){
+                devLogger('error',e);
+            }
+
+            const is_removed = mediasoupObj.broadcasters.delete(user_id);
+            devLogger('hapus:',is_removed);
             const broadcasters = mediasoupObj.getBroadcasters();
             // console.log('cok',Array.from(mediasoupObj.broadcasters),typeof socket.decoded_token.sub);
             socket.broadcast.emit('mediasoup_broadcasters',broadcasters);
