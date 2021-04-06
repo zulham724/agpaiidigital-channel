@@ -103,18 +103,50 @@ let obj = {
             });
 
             // masukkan consumer ke map() sesuai type audio/video
-            if(consumer.kind=='audio'){
+            if (consumer.kind == 'audio') {
+
               broadcaster.audioConsumers.set(consumer_user_id, consumer);
-            }else if(consumer.kind=='video'){
+
+              // Set Consumer events.
+              consumer.on('transportclose', () => {
+                // Remove from its map.
+                devLogger('transportclose');
+                // broadcaster.audioConsumers.delete(consumer_user_id);
+              });
+              consumer.on('producerclose', () => {
+                // Remove from its map.
+                devLogger('producerclose');
+                // broadcaster.audioConsumers.delete(consumer_user_id);
+              });
+
+            } else if (consumer.kind == 'video') {
+
               broadcaster.videoConsumers.set(consumer_user_id, consumer);
+
+              // Set Consumer events.
+              consumer.on('transportclose', () => {
+                // Remove from its map.
+                devLogger('transportclose');
+                // broadcaster.videoConsumers.delete(consumer_user_id);
+              });
+              consumer.on('producerclose', () => {
+                // Remove from its map.
+                devLogger('producerclose');
+                // broadcaster.videoConsumers.delete(consumer_user_id);
+              });
+
             }
             /////-------------------------------//////
             devLogger("createConsumer", consumer);
+
+
             if (consumer.type === 'simulcast') {
               await consumer.setPreferredLayers({ spatialLayer: 2, temporalLayer: 2 });
             }
 
             return {
+              broadcaster_user: broadcaster.user,
+              broadcaster_title: broadcaster.title,
               producerId: producer.id,
               id: consumer.id,
               kind: consumer.kind,
@@ -150,6 +182,53 @@ let obj = {
       users.push(value.user);
     }
     return users;
+  },
+  closeProducer({ broadcaster_user_id }) {
+    try {
+      const broadcaster = obj.broadcasters.get(broadcaster_user_id);
+
+      devLogger('[closeProducer] audioProducer to removed:', broadcaster.audioProducer.id);
+      devLogger('[closeProducer] videoProducer to removed:', broadcaster.videoProducer.id);
+      devLogger('[closeProducer] producerTransport to removed:', broadcaster.producerTransport.id);
+
+      broadcaster.videoProducer.close();
+      broadcaster.audioProducer.close();
+      broadcaster.producerTransport.close();
+
+      for (const transport of broadcaster.consumerTransports.values()) {
+        transport.close();
+      }
+      for (const consumer of broadcaster.audioConsumers.values()) {
+        consumer.close();
+      }
+      for (const consumer of broadcaster.videoConsumers.values()) {
+        consumer.close();
+      }
+
+      // remove from its Map
+      obj.broadcasters.delete(broadcaster_user_id);
+    } catch (e) {
+      devLogger(e);
+    }
+
+  },
+  closeConsumer({ broadcaster_user_id, consumer_user_id }) {
+    try {
+      const broadcaster = obj.broadcasters.get(broadcaster_user_id);
+      const consumerTransport = broadcaster.consumerTransports.get(consumer_user_id);
+
+      const audioConsumer = broadcaster.audioConsumers.get(consumer_user_id);
+      const videoConsumer = broadcaster.videoConsumers.get(consumer_user_id);
+
+      devLogger('[closeConsumer] consumerTranport to removed:', consumerTransport.id);
+      devLogger('[closeConsumer] audioConsumer to removed:', audioConsumer.id);
+      devLogger('[closeConsumer] videoConsumer to removed:', videoConsumer.id);
+      consumerTransport.close();
+      audioConsumer.close();
+      videoConsumer.close();
+    } catch (e) {
+      devLogger(e);
+    }
   }
 
 }

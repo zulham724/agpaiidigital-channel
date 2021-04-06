@@ -59,14 +59,27 @@ module.exports = async function (server, { mediasoupObj }) {
 
         socket.on("disconnect",()=>{
             devLogger('[disconnect] user_id',socket.decoded_token.sub,' disconnect');
-            // hapus dari broadcasters jika user disconnect
+
             const user_id = parseInt(socket.decoded_token.sub);
 
+            if(mediasoupObj.broadcasters.has(user_id)){
+                mediasoupObj.closeProducer({broadcaster_user_id:user_id})
+            }
+            
+
+            // hapus dari broadcasters jika user disconnect
+            
+
             try{
+
                 if(mediasoupObj.broadcasters.has(user_id)){
                     const broadcaster = mediasoupObj.broadcasters.get(user_id);
-                    devLogger('producer_id to removed:',broadcaster.producer.id)
-                    broadcaster.producer.close();
+                    devLogger('producer id to removed:',broadcaster.audioProducer.id, broadcaster.videoProducer.id)
+                    // close producer
+                    broadcaster.audioProducer.close();
+                    broadcaster.videoProducer.close();
+                    // close transport
+
                 }
                 
             }catch(e){
@@ -75,6 +88,7 @@ module.exports = async function (server, { mediasoupObj }) {
 
             const is_removed = mediasoupObj.broadcasters.delete(user_id);
             devLogger('hapus:',is_removed);
+
             const broadcasters = mediasoupObj.getBroadcasters();
             // console.log('cok',Array.from(mediasoupObj.broadcasters),typeof socket.decoded_token.sub);
             socket.broadcast.emit('mediasoup_broadcasters',broadcasters);
