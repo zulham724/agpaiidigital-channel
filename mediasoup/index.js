@@ -179,7 +179,7 @@ let obj = {
   getBroadcasters() {
     let users = [];
     for (let [key, value] of obj.broadcasters) {
-      users.push(value.user);
+      users.push({ ...value.user, title: value.title });
     }
     return users;
   },
