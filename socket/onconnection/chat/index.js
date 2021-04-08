@@ -1,7 +1,7 @@
 const devLogger = require("../../../lib/devLogger");
-module.exports = function(socket, io){
-     // console.log("client connected", new Date());
-     socket.on("join", function (room) {
+module.exports = function (socket, io) {
+    // console.log("client connected", new Date());
+    socket.on("join", function (room) {
         // // jika client join ke room dgn prefix di bawah, maka akan dilakukan pengecekan authentication berdasarkan socket.decode_token.sub
         // const prefix_to_check = ['personal_conversation'];
         // // if(checkAuth(room,))
@@ -31,7 +31,7 @@ module.exports = function(socket, io){
     });
 
     // untuk event pesan
-    socket.on("message", ({ conversation, data }) => {
+    socket.on("message", ({ conversation, data }, callback) => {
         try {
             console.log(
                 "[message] to conversation_id ",
@@ -63,34 +63,32 @@ module.exports = function(socket, io){
                     payload: payload,
                 });
             });
-            // io.to().emit()
-            // mengirim event conversations_list.$user_id ke penerim
 
-            // try{
-            //     receivers.forEach(user=>{
-            //         io.emit("conversation_list."+user.id, {conversation, data})
-            //         console.log("conversation_list_"+user.id)
-            //     });
-            // }catch(err){
-            //     console.log(err);
-            // }
 
+            //////////////////////////////////////////////////////
             //  mengirim data message ke microservice agar tersimpan ke db
             const postData = {
                 conversation_id: conversation_id,
                 value: data.message.value,
             };
-            require("../..//saveMessage")({
+            const saveMessage = require("../../saveMessage")({
                 postData: postData,
                 jwt: socket.jwt,
             });
+            saveMessage.then(chat_id => {
+                if (callback) callback({ chat_id, timestamp: data.timestamp });
+            }).catch(err => {
+                devLogger('error saveMessage', err);
+            })
+            /////////////////////////////////////////////////////
+
             // require('../socket/updateConversation')({conversation:conversation, jwt:socket.jwt}); // mengupdate data updated_at agar conversations dengan pesan paling baru di urutan atas
 
             // socket.to(room).emit("message", data); //hanya mengirim ke penerima
 
             // console.groupCollapsed(['room'],io.sockets.adapter.rooms['conversation'].sockets);
         } catch (err) {
-            console.log("[message] EVENT error:", err.name);
+            devLogger("[message] EVENT error:", err);
         }
     });
 
@@ -105,7 +103,7 @@ module.exports = function(socket, io){
                 io.to(receiver_room).emit("typing", { conversation, sender });
             });
         } catch (err) {
-            if(process.env.APP_DEV=='true') console.log("[typing] EVENT error:", err);
+            if (process.env.APP_DEV == 'true') console.log("[typing] EVENT error:", err);
         }
     });
 
@@ -143,7 +141,7 @@ module.exports = function(socket, io){
         }, (data) => {
             console.log('[read_conversation] response from server:', data);
             const user_id = socket.decoded_token.sub;
-            const payload = { conversation_id: conversation_id, unread_conversations: data.unread_conversations,read_at: data.read_at, read_chats: data.read_chats }
+            const payload = { conversation_id: conversation_id, unread_conversations: data.unread_conversations, read_at: data.read_at, read_chats: data.read_chats }
             io.to(`conversation_list_${user_id}`).emit('read_conversation', payload);
         });
     });
