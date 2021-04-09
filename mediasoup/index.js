@@ -1,5 +1,6 @@
 const mediasoup = require("mediasoup");
 const devLogger = require("../lib/devLogger");
+const socket = require("../socket");
 const config = require('./../config');
 
 let obj = {
@@ -24,12 +25,13 @@ let obj = {
         avatar
       }
       producerTransport,
-      consumerTransports: [undefasdasdasdined],
       videoProducer: undefined,
       audioProducer: undefined,
-      consumers:  [
-
-      ]
+      consumerTransports: new Map(),
+      videoConsumers: new Map(),
+      audioConsumers: new Map(),
+      userConsumers: new Map()
+     
     }
   */
   // methods
@@ -79,7 +81,7 @@ let obj = {
     };
   },
 
-  async createConsumer(producer, rtpCapabilities, consumer_user_id, broadcaster_user_id) {
+  async createConsumer({producer, rtpCapabilities, consumer_user_id, broadcaster_user_id, ...args}) {
     if (!producer) {
       console.error('producer undefined');
       return;
@@ -101,6 +103,7 @@ let obj = {
               rtpCapabilities,
               paused: producer.kind === 'video',
             });
+           
 
             // masukkan consumer ke map() sesuai type audio/video
             if (consumer.kind == 'audio') {
@@ -183,6 +186,8 @@ let obj = {
     }
     return users;
   },
+  // Akan meng-close audioProducer, videoProducer, dan producerTransport
+  // setelah di-close, dihapus dri Map() broadcasters
   closeProducer({ broadcaster_user_id }) {
     try {
       const broadcaster = obj.broadcasters.get(broadcaster_user_id);
@@ -212,9 +217,12 @@ let obj = {
     }
 
   },
+  // Akan meng-close audioConsumer, videoConsumer, dan consumerTranport
+  // setelah di-close, dihapus dri Map()
   closeConsumer({ broadcaster_user_id, consumer_user_id }) {
     try {
       const broadcaster = obj.broadcasters.get(broadcaster_user_id);
+      if(!broadcaster)throw 'Broadcaster with id '+broadcaster_user_id+' not found';
       const consumerTransport = broadcaster.consumerTransports.get(consumer_user_id);
 
       const audioConsumer = broadcaster.audioConsumers.get(consumer_user_id);
@@ -226,9 +234,59 @@ let obj = {
       consumerTransport.close();
       audioConsumer.close();
       videoConsumer.close();
+
+      // hapus consumer dan tranport dri Map
+      broadcaster.audioConsumers.delete(consumer_user_id);
+      broadcaster.videoConsumers.delete(consumer_user_id);
+      broadcaster.consumerTransports.delete(consumer_user_id);
+      broadcaster.userConsumers.delete(consumer_user_id);
+      
+     
+
     } catch (e) {
       devLogger(e);
     }
+  },
+  // melakukan iterasi pada semua broadcasters,
+  // jika ada audio/video consumer, transport, userconsumer, maka close dan hapus dri Map()
+  closeConsumerInAllBroadcasters(consumer_user_id) {
+    try{
+      for (let [key, broadcaster] of obj.broadcasters) {
+        const check = broadcaster.consumerTransports.has(consumer_user_id);
+        if (check) {
+          // close dan hapus consumerTransport
+          const consumerTransport = broadcaster.consumerTransports.get(consumer_user_id);
+          if(consumerTransport){
+            consumerTransport.close();
+            broadcaster.consumerTransports.delete(consumer_user_id);
+          }
+  
+          // close dan hapus audioConsumer
+          const audioConsumer = broadcaster.audioConsumers.get(consumer_user_id);
+          if(audioConsumer){
+            audioConsumer.close();
+            broadcaster.audioConsumers.delete(consumer_user_id);
+          }
+  
+          // close dan hapus videoConsumer
+          const videoConsumer = broadcaster.videoConsumers.get(consumer_user_id);
+          if(videoConsumer){
+            videoConsumer.close();
+            broadcaster.videoConsumers.delete(consumer_user_id);
+          }
+  
+          // close dan hapus userConsumer
+          const userConsumer = broadcaster.userConsumers.get(consumer_user_id);
+          if(userConsumer){
+            broadcaster.userConsumers.delete(consumer_user_id);
+          }
+          
+        }
+      }
+    }catch(err){
+      devLogger('closeConsumerInAllBroadcasters',err);
+    }
+   
   }
 
 }

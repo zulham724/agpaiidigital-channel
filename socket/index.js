@@ -62,25 +62,22 @@ module.exports = async function (server, { mediasoupObj }) {
 
             const user_id = parseInt(socket.decoded_token.sub);
 
-            if(mediasoupObj.broadcasters.has(user_id)){
-                mediasoupObj.closeProducer({broadcaster_user_id:user_id})
-            }
-            
-
-            // hapus dari broadcasters jika user disconnect
-            
-
             try{
 
+                // sbg Producer, hapus dri Map broadcasters jika disconnect
                 if(mediasoupObj.broadcasters.has(user_id)){
-                    const broadcaster = mediasoupObj.broadcasters.get(user_id);
-                    devLogger('producer id to removed:',broadcaster.audioProducer.id, broadcaster.videoProducer.id)
-                    // close producer
-                    broadcaster.audioProducer.close();
-                    broadcaster.videoProducer.close();
-                    // close transport
+                    // close producer dan transport, dan hapus broadcaster dri Map
+                    // const broadcaster = mediasoupObj.broadcasters.get(user_id);
+                    // devLogger('producer id to removed:',broadcaster.audioProducer.id, broadcaster.videoProducer.id)
+                    mediasoupObj.closeProducer({broadcaster_user_id:user_id})
+                    
 
                 }
+
+                // sbg Consumer, hapus dri semua proprety dri broadcasters map() 
+                mediasoupObj.closeConsumerInAllBroadcasters(user_id);
+                // socket.broadcast.emit('total_broadcaster_viewer', { broadcaster_user_id: key, total_viewer: broadcaster.userConsumers.size });
+
                 
             }catch(e){
                 devLogger('error',e);
