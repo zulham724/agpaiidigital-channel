@@ -30,7 +30,8 @@ let obj = {
       consumerTransports: new Map(),
       videoConsumers: new Map(),
       audioConsumers: new Map(),
-      userConsumers: new Map()
+      userConsumers: new Map().
+      total_viewer
      
     }
   */

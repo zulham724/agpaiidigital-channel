@@ -55,7 +55,7 @@ module.exports = async function (server, { mediasoupObj }) {
         devLogger('[connection] new socket.io client:', socket.id);
 
         chatModule(socket, io);
-        mediasoupModule(socket, {mediasoupObj:mediasoupObj});
+        mediasoupModule(socket, io, {mediasoupObj:mediasoupObj});
 
         socket.on("disconnect",()=>{
             devLogger('[disconnect] user_id',socket.decoded_token.sub,' disconnect');
