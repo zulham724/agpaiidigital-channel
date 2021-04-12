@@ -1,5 +1,6 @@
 // const { parse } = require("mediasoup/lib/scalabilityModes");
 const devLogger = require("../../../lib/devLogger");
+const { broadcasters } = require("../../../mediasoup");
 // const { broadcasters } = require("../../../mediasoup");
 module.exports = async function (socket, io, { mediasoupObj }) {
     socket.on("getRouterRtpCapabilities", (data, callback) => {
@@ -242,10 +243,24 @@ module.exports = async function (socket, io, { mediasoupObj }) {
 
     });
 
+    // mendapatkan list orang yang melakukan siaran langsung
     socket.on('getBroadcasters', async (data, callback) => {
         // const my_user_id = parseInt(socket.decoded_token.sub);
         const broadcasters = mediasoupObj.getBroadcasters();
         callback(broadcasters);
+    });
+    // mendapatkan jumlah penonton berdasarkan broadcaster yang ditentukan
+    socket.on('getViewers', async({broadcaster_user_id}, callback)=>{
+        try{
+            const broadcaster = mediasoupObj.broadcasters.get(parseInt(broadcaster_user_id));
+            if(broadcaster){
+                const viewers = Array.from(broadcaster.userConsumers.values());
+                callback({users:viewers});
+            }else callback({error:'Broadcaster not found'});
+
+        }catch(err){
+            callback({error:err.message})
+        }
     });
 
     socket.on('closeProducer', async (data, callback) => {

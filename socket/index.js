@@ -77,8 +77,9 @@ module.exports = async function (server, { mediasoupObj }) {
                 // sbg Consumer, hapus dri semua proprety dri broadcasters map() 
                 mediasoupObj.closeConsumerInAllBroadcasters(user_id);
                 // socket.broadcast.emit('total_broadcaster_viewer', { broadcaster_user_id: key, total_viewer: broadcaster.userConsumers.size });
+                //
 
-                
+            
             }catch(e){
                 devLogger('error',e);
             }
