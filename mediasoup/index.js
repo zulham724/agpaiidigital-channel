@@ -249,12 +249,17 @@ let obj = {
     }
   },
   // melakukan iterasi pada semua broadcasters,
-  // jika ada audio/video consumer, transport, userconsumer, maka close dan hapus dri Map()
+  // jika ada audio/video consumer, transport, userconsumer dgn key=consumer_user_id maka close dan hapus dri Map()
   closeConsumerInAllBroadcasters(consumer_user_id) {
+    let broadcasters_target = [];
     try{
+      
       for (let [key, broadcaster] of obj.broadcasters) {
         const check = broadcaster.consumerTransports.has(consumer_user_id);
+        // jika ada broadcaster yang mempunyai consumer saat ini, maka masukkan ke broadcaster_targe
         if (check) {
+          broadcasters_target.push(broadcaster);
+
           // close dan hapus consumerTransport
           const consumerTransport = broadcaster.consumerTransports.get(consumer_user_id);
           if(consumerTransport){
@@ -284,8 +289,10 @@ let obj = {
           
         }
       }
+      return broadcasters_target;
     }catch(err){
       devLogger('closeConsumerInAllBroadcasters',err);
+      return broadcasters_target;
     }
    
   }

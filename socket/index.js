@@ -49,50 +49,54 @@ module.exports = async function (server, { mediasoupObj }) {
         //this socket is authenticated, we are good to handle more events from it.
         // console.log(`hello user_id:`,socket.decoded_token.sub);
 
-        
+
         // memberi property user_id pada client socket
         socket.user_id = socket.decoded_token.sub;
         devLogger('[connection] new socket.io client:', socket.id);
 
         chatModule(socket, io);
-        mediasoupModule(socket, io, {mediasoupObj:mediasoupObj});
+        mediasoupModule(socket, io, { mediasoupObj: mediasoupObj });
 
-        socket.on("disconnect",()=>{
-            devLogger('[disconnect] user_id',socket.decoded_token.sub,' disconnect');
+        socket.on("disconnect", () => {
+            devLogger('[disconnect] user_id', socket.decoded_token.sub, ' disconnect');
 
             const user_id = parseInt(socket.decoded_token.sub);
 
-            try{
+            try {
 
                 // sbg Producer, hapus dri Map broadcasters jika disconnect
-                if(mediasoupObj.broadcasters.has(user_id)){
+                if (mediasoupObj.broadcasters.has(user_id)) {
                     // close producer dan transport, dan hapus broadcaster dri Map
                     // const broadcaster = mediasoupObj.broadcasters.get(user_id);
                     // devLogger('producer id to removed:',broadcaster.audioProducer.id, broadcaster.videoProducer.id)
-                    mediasoupObj.closeProducer({broadcaster_user_id:user_id})
-                    
+                    mediasoupObj.closeProducer({ broadcaster_user_id: user_id })
+
 
                 }
 
                 // sbg Consumer, hapus dri semua proprety dri broadcasters map() 
-                mediasoupObj.closeConsumerInAllBroadcasters(user_id);
-                // socket.broadcast.emit('total_broadcaster_viewer', { broadcaster_user_id: key, total_viewer: broadcaster.userConsumers.size });
+                let broadcasters_target = mediasoupObj.closeConsumerInAllBroadcasters(user_id);
+                // beri sinyal pada semua broadcaster untuk memberitahu jumlah viewer sekarang
+                for (let broadcaster of broadcasters_target) {
+                    const room = 'broadcaster_user_id:' + broadcaster.user.id;
+                    io.to(room).emit('total_broadcaster_viewer', { broadcaster_user_id: broadcaster.user.id, total_viewer: broadcaster.userConsumers.size });
+                }
                 //
 
-            
-            }catch(e){
-                devLogger('error',e);
+
+            } catch (e) {
+                devLogger('error', e);
             }
 
             const is_removed = mediasoupObj.broadcasters.delete(user_id);
-            devLogger('hapus:',is_removed);
+            devLogger('hapus:', is_removed);
 
             const broadcasters = mediasoupObj.getBroadcasters();
             // console.log('cok',Array.from(mediasoupObj.broadcasters),typeof socket.decoded_token.sub);
-            socket.broadcast.emit('mediasoup_broadcasters',broadcasters);
+            socket.broadcast.emit('mediasoup_broadcasters', broadcasters);
         });
-        
-       
+
+
     });
     return io;
 };

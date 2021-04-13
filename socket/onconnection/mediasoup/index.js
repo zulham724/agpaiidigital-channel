@@ -280,8 +280,12 @@ module.exports = async function (socket, io, { mediasoupObj }) {
 
     socket.on('closeConsumer', async (data, callback) => {
         try {
+            devLogger(['[closeConsumer] ',data]);
+
             const consumer_user_id = parseInt(socket.decoded_token.sub);
             const broadcaster_user_id = parseInt(data.broadcaster_user_id);
+            const room = 'broadcaster_user_id:' + broadcaster_user_id;
+
             mediasoupObj.closeConsumer({ broadcaster_user_id, consumer_user_id })
 
             // lakukan pengecekan
@@ -289,7 +293,9 @@ module.exports = async function (socket, io, { mediasoupObj }) {
                 const broadcaster = mediasoupObj.broadcasters.get(broadcaster_user_id);
                 // jika ada atribut userConsumers, maka lakukan proses ini
                 if (broadcaster.userConsumers) {
-                    socket.broadcast.emit('total_broadcaster_viewer', { broadcaster_user_id, total_viewer: broadcaster.userConsumers.size });
+                    // memberi sinyal jumlah viewers pada semua client dalam 1 room
+                    io.to(room).emit('total_broadcaster_viewer', { broadcaster_user_id, total_viewer: broadcaster.userConsumers.size });
+                    // socket.broadcast.emit('total_broadcaster_viewer', { broadcaster_user_id, total_viewer: broadcaster.userConsumers.size });
                 }
             }
             // remove broadcaster from its Map
