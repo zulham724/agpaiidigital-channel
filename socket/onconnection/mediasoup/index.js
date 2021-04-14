@@ -22,6 +22,8 @@ module.exports = async function (socket, io, { mediasoupObj }) {
             transport.observer.on("close", () => {
                 // socket di sini mengacu pada producer
                 // memberi signal ke semua client dalam 1 room yg sama kecuali producer, bahwa transport telah di-close/siaran langsung berhenti
+                socket.to(room).emit('producerTransportIsClosed');
+                // fungsinya sama, cman berbeda nama event saja, digunakan untuk app versi lama
                 socket.to(room).emit('transportClose');
             });
 
@@ -38,7 +40,9 @@ module.exports = async function (socket, io, { mediasoupObj }) {
                 audioConsumers: new Map(),
                 videoConsumers: new Map(),
                 userConsumers: new Map(),
-                total_viewer:0,
+                chats: [],
+                total_viewer: 0,
+
 
             }
             devLogger('[+] ProducerTransport ID:', transport.id);
@@ -67,11 +71,16 @@ module.exports = async function (socket, io, { mediasoupObj }) {
             if (broadcaster) {
                 const { transport, params } = await mediasoupObj.createWebRtcTransport();
 
+
                 devLogger('[params consumer]', params);
 
                 const my_user_id = parseInt(socket.decoded_token.sub);
                 // jika consumer transport ada, maka hapus dan buat baru
                 if (broadcaster.consumerTransports.has(my_user_id)) {
+
+                    // beritahu socket saat ini bahwa consumerTransport'nya ditimpa dengan yg baru
+                    // io.to(socket.id).emit('myConsumerTransportIsClosed');
+
                     const myConsumerTransport = broadcaster.consumerTransports.get(my_user_id);
                     myConsumerTransport.close();
                     // kemudian hapus dari map
@@ -250,16 +259,16 @@ module.exports = async function (socket, io, { mediasoupObj }) {
         callback(broadcasters);
     });
     // mendapatkan jumlah penonton berdasarkan broadcaster yang ditentukan
-    socket.on('getViewers', async({broadcaster_user_id}, callback)=>{
-        try{
+    socket.on('getViewers', async ({ broadcaster_user_id }, callback) => {
+        try {
             const broadcaster = mediasoupObj.broadcasters.get(parseInt(broadcaster_user_id));
-            if(broadcaster){
+            if (broadcaster) {
                 const viewers = Array.from(broadcaster.userConsumers.values());
-                callback({users:viewers});
-            }else callback({error:'Broadcaster not found'});
+                callback({ users: viewers });
+            } else callback({ error: 'Broadcaster not found' });
 
-        }catch(err){
-            callback({error:err.message})
+        } catch (err) {
+            callback({ error: err.message })
         }
     });
 
@@ -280,7 +289,7 @@ module.exports = async function (socket, io, { mediasoupObj }) {
 
     socket.on('closeConsumer', async (data, callback) => {
         try {
-            devLogger(['[closeConsumer] ',data]);
+            devLogger(['[closeConsumer] ', data]);
 
             const consumer_user_id = parseInt(socket.decoded_token.sub);
             const broadcaster_user_id = parseInt(data.broadcaster_user_id);
@@ -304,5 +313,46 @@ module.exports = async function (socket, io, { mediasoupObj }) {
             callback({ error: e.message });
         }
 
+    });
+
+    socket.on('live_streaming_chat', async (data) => {
+        try {
+            // struktur untuk chat:
+            // {
+            //  message,
+            //  user:{
+            //     email,name,avatar
+            //   }
+            // }
+            const broadcaster_user_id = parseInt(data.broadcaster_user_id);
+            const broadcaster = mediasoupObj.broadcasters.get(broadcaster_user_id);
+            if (broadcaster) {
+                const room = 'broadcaster_user_id:' + broadcaster_user_id;
+                socket.to(room).emit('live_streaming_chat', data);
+                broadcaster.chats.push({
+                    user: data.user,
+                    message: data.message
+                });
+                devLogger("[live_streaming_chat] data:", data);
+
+
+            } else {
+                devLogger('[live_streaming_chat] broadcaster not found:', data);
+            }
+        } catch (err) {
+            devLogger('Error in [live_streaming_chat]', err);
+        }
+    });
+
+    socket.on('getBroadcasterChats', async ({ broadcaster_user_id }, callback) => {
+        try {
+            const broadcaster = mediasoupObj.broadcasters.get(parseInt(broadcaster_user_id));
+            if (broadcaster) {
+                const chats = broadcaster.chats;
+                callback({ chats });
+            } else callback({ error: 'Broadcaster not found' });
+        } catch (err) {
+            callback({ error: err.message })
+        }
     });
 }

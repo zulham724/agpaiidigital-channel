@@ -31,7 +31,8 @@ let obj = {
       videoConsumers: new Map(),
       audioConsumers: new Map(),
       userConsumers: new Map().
-      total_viewer
+      total_viewer,
+      chats:[],
      
     }
   */
