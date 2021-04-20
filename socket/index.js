@@ -2,6 +2,8 @@ const { default: axios } = require("axios");
 const devLogger = require("../lib/devLogger");
 const chatModule = require("./onconnection/chat/index");
 const mediasoupModule = require("./onconnection/mediasoup");
+const phonecallModule = require("./onconnection/phonecall");
+
 function checkAuth(room, socket) {
     const user_id = socket.decoded_token.sub;
     const a = room.split("_").pop();
@@ -54,8 +56,9 @@ module.exports = async function (server, { mediasoupObj }) {
         socket.user_id = socket.decoded_token.sub;
         devLogger('[connection] new socket.io client:', socket.id);
 
-        chatModule(socket, io);
-        mediasoupModule(socket, io, { mediasoupObj: mediasoupObj });
+        chatModule(socket, io); // modul yg berisi event2 untuk chat
+        mediasoupModule(socket, io, { mediasoupObj: mediasoupObj }); //modul yg verisi event2 untuk mediasoup
+        phonecallModule(socket, io);
 
         socket.on("disconnect", () => {
             devLogger('[disconnect] user_id', socket.decoded_token.sub, ' disconnect');
