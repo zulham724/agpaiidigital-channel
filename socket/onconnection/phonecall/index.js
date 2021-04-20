@@ -12,13 +12,14 @@ module.exports = function (socket, io) {
     // RtcSessionDescription = 
     socket.on('offer', async ({sender_id, receiver_id, sdp})=>{
         const room = 'phone_'+receiver_id;
-        socket.to(room).emit('offer', {sender_id, sdp});
+        socket.to(room).emit('offer', {sender_id, receiver_id, sdp});
         devLogger('[offer] sdp:',sdp);
     });
 
     socket.on('candidate', async ({sender_id, receiver_id, candidate})=>{
         const room = 'phone_'+receiver_id;
         socket.to(room).emit('candidate', {sender_id, receiver_id, candidate});
+        devLogger('[candidate]',{sender_id, receiver_id, candidate});
     });
 
     socket.on('answer_offer', async ({sender_id, receiver_id, sdp})=>{
