@@ -27,4 +27,31 @@ module.exports = function (socket, io) {
         socket.to(room).emit('answer_offer', {sender_id, sdp});
         devLogger('[answer_offer] sdp:',sdp);
     });
+
+     // event jika pengirim menghentikan panggilan telefon
+    socket.on('hangup', async ({sender_id, receiver_id})=>{
+        const room = 'phone_'+receiver_id;
+        socket.to(room).emit('hangup', {receiver_id, sender_id});
+        devLogger('[hangup] params:',{receiver_id, sender_id});
+    });
+
+    socket.on('incoming_call', async ({sender, receiver_id})=>{
+        const room = 'phone_'+receiver_id;
+        socket.to(room).emit('incoming_call', {receiver_id, sender});
+        devLogger('[incoming_call] params:',{receiver_id, sender});
+    });
+
+     // event jika penerima menolak mengangkat telefon. event ini dikirim ke pengirim telefon
+    socket.on('reject_incoming_call', async ({sender_id, receiver_id})=>{
+        const room = 'phone_'+receiver_id;
+        socket.to(room).emit('reject_incoming_call', {receiver_id, sender_id});
+        devLogger('[reject_incoming_call] params:',{receiver_id, sender_id});
+    });
+
+     // event jika penerima menerima mengangkat telefon. event ini dikirim ke pengirim telefon
+     socket.on('answer_incoming_call', async ({sender_id, receiver_id})=>{
+        const room = 'phone_'+receiver_id;
+        socket.to(room).emit('answer_incoming_call', {receiver_id, sender_id});
+        devLogger('[answer_incoming_call] params:',{receiver_id, sender_id});
+    });
 }
