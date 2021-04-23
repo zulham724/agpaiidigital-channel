@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "run": "pm2 start ./bin/www"
+    "run": "pm2 start bin/www --name 'socket'",
+    "link": "pm2 link 9a9zbizub3u1tu0 ae1lkgmf93cntoi",
+    "list": "pm2 list",
+    "restart": "pm2 restart socket"
   },
   "dependencies": {
     "@ardatamedia/ardata-jsonwebtoken": "0.0.1",

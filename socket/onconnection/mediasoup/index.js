@@ -1,7 +1,8 @@
-const { parse } = require("mediasoup/lib/scalabilityModes");
+// const { parse } = require("mediasoup/lib/scalabilityModes");
 const devLogger = require("../../../lib/devLogger");
 const { broadcasters } = require("../../../mediasoup");
-module.exports = async function (socket, { mediasoupObj }) {
+// const { broadcasters } = require("../../../mediasoup");
+module.exports = async function (socket, io, { mediasoupObj }) {
     socket.on("getRouterRtpCapabilities", (data, callback) => {
         // devLogger("[getRouterRtpCapabilities] ");
         // io.emit(mediasoupObj.router.rtpCapabilities);
@@ -13,7 +14,19 @@ module.exports = async function (socket, { mediasoupObj }) {
     socket.on('createProducerTransport', async (data, callback) => {
         // console.log("[c] ");pipeToRouter
         try {
+            // membuat room socket.io untuk menampung producer dan consumers
+            const room = 'broadcaster_user_id:' + data.user.id;
+            socket.join(room);
+
             const { transport, params } = await mediasoupObj.createWebRtcTransport();
+            transport.observer.on("close", () => {
+                // socket di sini mengacu pada producer
+                // memberi signal ke semua client dalam 1 room yg sama kecuali producer, bahwa transport telah di-close/siaran langsung berhenti
+                socket.to(room).emit('producerTransportIsClosed');
+                // fungsinya sama, cman berbeda nama event saja, digunakan untuk app versi lama
+                socket.to(room).emit('transportClose');
+            });
+
             const broadcaster = {
                 title: data.title,
                 user: data.user,
@@ -26,6 +39,10 @@ module.exports = async function (socket, { mediasoupObj }) {
                 // consumers: new Map(),
                 audioConsumers: new Map(),
                 videoConsumers: new Map(),
+                userConsumers: new Map(),
+                chats: [],
+                total_viewer: 0,
+
 
             }
             devLogger('[+] ProducerTransport ID:', transport.id);
@@ -43,15 +60,27 @@ module.exports = async function (socket, { mediasoupObj }) {
     socket.on('createConsumerTransport', async (data, callback) => {
         devLogger("[createConsumerTransport] ", data);
         try {
+
             const broadcaster_user_id = parseInt(data.broadcaster_user_id);
+
+            // membuat room socket.io untuk menampung producer dan consumers
+            const room = 'broadcaster_user_id:' + broadcaster_user_id;
+            socket.join(room);
+
             const broadcaster = mediasoupObj.broadcasters.get(broadcaster_user_id);
             if (broadcaster) {
                 const { transport, params } = await mediasoupObj.createWebRtcTransport();
+
+
                 devLogger('[params consumer]', params);
 
                 const my_user_id = parseInt(socket.decoded_token.sub);
                 // jika consumer transport ada, maka hapus dan buat baru
                 if (broadcaster.consumerTransports.has(my_user_id)) {
+
+                    // beritahu socket saat ini bahwa consumerTransport'nya ditimpa dengan yg baru
+                    // io.to(socket.id).emit('myConsumerTransportIsClosed');
+
                     const myConsumerTransport = broadcaster.consumerTransports.get(my_user_id);
                     myConsumerTransport.close();
                     // kemudian hapus dari map
@@ -86,6 +115,16 @@ module.exports = async function (socket, { mediasoupObj }) {
                 // const myConsumerTransport = mediasoupObj.consumerTransports.set(my_user_id, transport);
                 broadcaster.consumerTransports.set(my_user_id, transport);
 
+                //masukkan data user ke map userConsumers dan emit ke semua client socket.io
+                if (data.user_consumer) {
+                    broadcaster.userConsumers.set(my_user_id, data.user_consumer);
+                    devLogger('user_consumer:', data.user_consumer);
+
+                    // memberi sinyal jumlah viewers pada semua client dalam 1 room
+                    io.to(room).emit('total_broadcaster_viewer', { broadcaster_user_id, total_viewer: broadcaster.userConsumers.size });
+                }
+
+
                 // mediasoupObj.consumerTransports = transport;
                 callback(params);
             } else {
@@ -119,7 +158,9 @@ module.exports = async function (socket, { mediasoupObj }) {
             const broadcaster = mediasoupObj.broadcasters.get(broadcaster_user_id);
             const consumerTransport = broadcaster.consumerTransports.get(my_user_id);
 
-            await consumerTransport.connect({ broadcaster_user_id, dtlsParameters: data.dtlsParameters });
+            // await consumerTransport.connect({ broadcaster_user_id, dtlsParameters: data.dtlsParameters });
+            await consumerTransport.connect({ dtlsParameters: data.dtlsParameters });
+            devLogger("consumerTransport.iceState", consumerTransport.iceState);
             callback();
         } catch (e) {
             console.error(e);
@@ -145,7 +186,7 @@ module.exports = async function (socket, { mediasoupObj }) {
                 broadcaster.audioProducer = producer;
                 devLogger("audioProducer = ", broadcaster.audioProducer);
             } else {
-                devLogger("asu");
+                // devLogger("kind not specified");
             }
 
 
@@ -181,7 +222,8 @@ module.exports = async function (socket, { mediasoupObj }) {
                     producer = broadcaster.videoProducer;
                 }
 
-                callback(await mediasoupObj.createConsumer(producer, data.rtpCapabilities, parseInt(socket.decoded_token.sub), broadcaster_user_id));
+                const params = { producer, rtpCapabilities: data.rtpCapabilities, consumer_user_id: parseInt(socket.decoded_token.sub), broadcaster_user_id };
+                callback(await mediasoupObj.createConsumer(params));
             } else {
                 callback({ error: 'Broadcaster with user id: ' + broadcaster_user_id + ' not found' })
             }
@@ -210,10 +252,24 @@ module.exports = async function (socket, { mediasoupObj }) {
 
     });
 
+    // mendapatkan list orang yang melakukan siaran langsung
     socket.on('getBroadcasters', async (data, callback) => {
         // const my_user_id = parseInt(socket.decoded_token.sub);
         const broadcasters = mediasoupObj.getBroadcasters();
         callback(broadcasters);
+    });
+    // mendapatkan jumlah penonton berdasarkan broadcaster yang ditentukan
+    socket.on('getViewers', async ({ broadcaster_user_id }, callback) => {
+        try {
+            const broadcaster = mediasoupObj.broadcasters.get(parseInt(broadcaster_user_id));
+            if (broadcaster) {
+                const viewers = Array.from(broadcaster.userConsumers.values());
+                callback({ users: viewers });
+            } else callback({ error: 'Broadcaster not found' });
+
+        } catch (err) {
+            callback({ error: err.message })
+        }
     });
 
     socket.on('closeProducer', async (data, callback) => {
@@ -233,15 +289,70 @@ module.exports = async function (socket, { mediasoupObj }) {
 
     socket.on('closeConsumer', async (data, callback) => {
         try {
+            devLogger(['[closeConsumer] ', data]);
+
             const consumer_user_id = parseInt(socket.decoded_token.sub);
             const broadcaster_user_id = parseInt(data.broadcaster_user_id);
+            const room = 'broadcaster_user_id:' + broadcaster_user_id;
+
             mediasoupObj.closeConsumer({ broadcaster_user_id, consumer_user_id })
 
+            // lakukan pengecekan
+            if (mediasoupObj.broadcasters.has(broadcaster_user_id)) {
+                const broadcaster = mediasoupObj.broadcasters.get(broadcaster_user_id);
+                // jika ada atribut userConsumers, maka lakukan proses ini
+                if (broadcaster.userConsumers) {
+                    // memberi sinyal jumlah viewers pada semua client dalam 1 room
+                    io.to(room).emit('total_broadcaster_viewer', { broadcaster_user_id, total_viewer: broadcaster.userConsumers.size });
+                    // socket.broadcast.emit('total_broadcaster_viewer', { broadcaster_user_id, total_viewer: broadcaster.userConsumers.size });
+                }
+            }
             // remove broadcaster from its Map
             callback({ success: true });
         } catch (e) {
             callback({ error: e.message });
         }
 
+    });
+
+    socket.on('live_streaming_chat', async (data) => {
+        try {
+            // struktur untuk chat:
+            // {
+            //  message,
+            //  user:{
+            //     email,name,avatar
+            //   }
+            // }
+            const broadcaster_user_id = parseInt(data.broadcaster_user_id);
+            const broadcaster = mediasoupObj.broadcasters.get(broadcaster_user_id);
+            if (broadcaster) {
+                const room = 'broadcaster_user_id:' + broadcaster_user_id;
+                socket.to(room).emit('live_streaming_chat', data);
+                broadcaster.chats.push({
+                    user: data.user,
+                    message: data.message
+                });
+                devLogger("[live_streaming_chat] data:", data);
+
+
+            } else {
+                devLogger('[live_streaming_chat] broadcaster not found:', data);
+            }
+        } catch (err) {
+            devLogger('Error in [live_streaming_chat]', err);
+        }
+    });
+
+    socket.on('getBroadcasterChats', async ({ broadcaster_user_id }, callback) => {
+        try {
+            const broadcaster = mediasoupObj.broadcasters.get(parseInt(broadcaster_user_id));
+            if (broadcaster) {
+                const chats = broadcaster.chats;
+                callback({ chats });
+            } else callback({ error: 'Broadcaster not found' });
+        } catch (err) {
+            callback({ error: err.message })
+        }
     });
 }

@@ -2,6 +2,8 @@ const { default: axios } = require("axios");
 const devLogger = require("../lib/devLogger");
 const chatModule = require("./onconnection/chat/index");
 const mediasoupModule = require("./onconnection/mediasoup");
+const phonecallModule = require("./onconnection/phonecall");
+
 function checkAuth(room, socket) {
     const user_id = socket.decoded_token.sub;
     const a = room.split("_").pop();
@@ -49,52 +51,55 @@ module.exports = async function (server, { mediasoupObj }) {
         //this socket is authenticated, we are good to handle more events from it.
         // console.log(`hello user_id:`,socket.decoded_token.sub);
 
-        
+
         // memberi property user_id pada client socket
         socket.user_id = socket.decoded_token.sub;
         devLogger('[connection] new socket.io client:', socket.id);
 
-        chatModule(socket, io);
-        mediasoupModule(socket, {mediasoupObj:mediasoupObj});
+        chatModule(socket, io); // modul yg berisi event2 untuk chat
+        mediasoupModule(socket, io, { mediasoupObj: mediasoupObj }); //modul yg verisi event2 untuk mediasoup
+        phonecallModule(socket, io);
 
-        socket.on("disconnect",()=>{
-            devLogger('[disconnect] user_id',socket.decoded_token.sub,' disconnect');
+        socket.on("disconnect", () => {
+            devLogger('[disconnect] user_id', socket.decoded_token.sub, ' disconnect');
 
             const user_id = parseInt(socket.decoded_token.sub);
 
-            if(mediasoupObj.broadcasters.has(user_id)){
-                mediasoupObj.closeProducer({broadcaster_user_id:user_id})
-            }
-            
+            try {
 
-            // hapus dari broadcasters jika user disconnect
-            
+                // sbg Producer, hapus dri Map broadcasters jika disconnect
+                if (mediasoupObj.broadcasters.has(user_id)) {
+                    // close producer dan transport, dan hapus broadcaster dri Map
+                    // const broadcaster = mediasoupObj.broadcasters.get(user_id);
+                    // devLogger('producer id to removed:',broadcaster.audioProducer.id, broadcaster.videoProducer.id)
+                    mediasoupObj.closeProducer({ broadcaster_user_id: user_id })
 
-            try{
-
-                if(mediasoupObj.broadcasters.has(user_id)){
-                    const broadcaster = mediasoupObj.broadcasters.get(user_id);
-                    devLogger('producer id to removed:',broadcaster.audioProducer.id, broadcaster.videoProducer.id)
-                    // close producer
-                    broadcaster.audioProducer.close();
-                    broadcaster.videoProducer.close();
-                    // close transport
 
                 }
-                
-            }catch(e){
-                devLogger('error',e);
+
+                // sbg Consumer, hapus dri semua proprety dri broadcasters map() 
+                let broadcasters_target = mediasoupObj.closeConsumerInAllBroadcasters(user_id);
+                // beri sinyal pada semua broadcaster untuk memberitahu jumlah viewer sekarang
+                for (let broadcaster of broadcasters_target) {
+                    const room = 'broadcaster_user_id:' + broadcaster.user.id;
+                    io.to(room).emit('total_broadcaster_viewer', { broadcaster_user_id: broadcaster.user.id, total_viewer: broadcaster.userConsumers.size });
+                }
+                //
+
+
+            } catch (e) {
+                devLogger('error', e);
             }
 
             const is_removed = mediasoupObj.broadcasters.delete(user_id);
-            devLogger('hapus:',is_removed);
+            devLogger('hapus:', is_removed);
 
             const broadcasters = mediasoupObj.getBroadcasters();
             // console.log('cok',Array.from(mediasoupObj.broadcasters),typeof socket.decoded_token.sub);
-            socket.broadcast.emit('mediasoup_broadcasters',broadcasters);
+            socket.broadcast.emit('mediasoup_broadcasters', broadcasters);
         });
-        
-       
+
+
     });
     return io;
 };
